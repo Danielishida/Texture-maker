@@ -41,7 +41,22 @@ export function exportDocument(
   });
 }
 
+declare global {
+  interface Window {
+    /** Injected by the Electron desktop shell (electron/preload.cjs). */
+    textureForgeDesktop?: { saveFile(filename: string, data: ArrayBuffer): Promise<string> };
+  }
+}
+
 export function downloadBlob(blob: Blob, filename: string) {
+  if (window.textureForgeDesktop) {
+    // Desktop app: write straight to the user's Downloads folder via IPC.
+    blob
+      .arrayBuffer()
+      .then((buf) => window.textureForgeDesktop!.saveFile(filename, buf))
+      .catch((err) => alert('Could not save file: ' + (err instanceof Error ? err.message : err)));
+    return;
+  }
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;

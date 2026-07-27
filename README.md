@@ -20,6 +20,21 @@ npm run typecheck  # strict TypeScript check
 
 Requires a browser with WebGL2 (all modern browsers).
 
+## Desktop app (Windows .exe)
+
+The app can be packaged as a standalone desktop app via Electron:
+
+```bash
+npm run package:win
+```
+
+This produces `release/Texture Forge-win32-x64/` — a portable folder containing
+`Texture Forge.exe` (no installer, no admin rights needed; zip it to share).
+Exports and saved projects land in the user's Downloads folder via an IPC save
+bridge (`electron/preload.cjs` → `tf-save-file`), since blob-anchor downloads
+don't reach disk reliably from `file://` in Electron. Other platforms work the
+same way, e.g. `--platform=linux` or `--platform=darwin` with `@electron/packager`.
+
 ## Features
 
 ### Generation & editing

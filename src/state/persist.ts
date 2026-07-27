@@ -2,6 +2,7 @@
 // No backend — everything stays on the user's machine.
 
 import { migrateDocument, type TFDocument } from '../engine/types';
+import { downloadBlob } from '../engine/export/exporter';
 
 const DB_NAME = 'texture-forge';
 const STORE = 'kv';
@@ -44,7 +45,7 @@ export async function saveProjectFile(doc: TFDocument): Promise<void> {
   const blob = new Blob([JSON.stringify(doc, null, 2)], { type: 'application/json' });
   const name = `${doc.name.replace(/[^\w-]+/g, '-').toLowerCase() || 'untitled'}.texture-forge.json`;
   const w = window as FilePickerWindow;
-  if (w.showSaveFilePicker) {
+  if (w.showSaveFilePicker && !window.textureForgeDesktop) {
     try {
       const handle = await w.showSaveFilePicker({
         suggestedName: name,
@@ -59,12 +60,7 @@ export async function saveProjectFile(doc: TFDocument): Promise<void> {
       // fall through to download
     }
   }
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = name;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 10000);
+  downloadBlob(blob, name);
 }
 
 export function openProjectFile(): Promise<TFDocument | null> {

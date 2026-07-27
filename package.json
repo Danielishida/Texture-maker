@@ -3,7 +3,9 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "main": "electron/main.cjs",
   "scripts": {
+    "package:win": "npm run build && npx @electron/packager . \"Texture Forge\" --platform=win32 --arch=x64 --out=release --overwrite --no-asar --electron-version=43.2.0 --ignore=\"^/(src|scripts|docs|release|node_modules|smoke.*)\"",
     "dev": "vite",
     "build": "vite build",
     "typecheck": "tsc --noEmit",
