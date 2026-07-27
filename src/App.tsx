@@ -7,6 +7,17 @@ import { Inspector } from './ui/Inspector';
 import { VariationsDrawer } from './ui/VariationsDrawer';
 import { ExportDialog } from './ui/ExportDialog';
 import { saveProjectFile } from './state/persist';
+import { generateStarterDocument, randomizeDocument } from './engine/randomize';
+
+// Debug/scripting hook (used by the headless smoke tests).
+declare global {
+  interface Window {
+    __tf?: { store: typeof useStore; generateStarterDocument: typeof generateStarterDocument; randomizeDocument: typeof randomizeDocument };
+  }
+}
+if (typeof window !== 'undefined') {
+  window.__tf = { store: useStore, generateStarterDocument, randomizeDocument };
+}
 
 function isTyping(): boolean {
   const el = document.activeElement;

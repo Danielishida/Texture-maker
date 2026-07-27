@@ -20,7 +20,8 @@ import {
   randomizeEffect,
   randomizeLayer,
 } from '../engine/randomize';
-import { CURATED_PALETTES, generatePalette, rerollPalette, type HarmonyRule, type Mood } from '../engine/palette';
+import { CURATED_PALETTES, generatePalette, rerollPalette, rerollPaletteForMode, type HarmonyRule, type Mood } from '../engine/palette';
+import { getStyle } from '../engine/styles';
 import { idbGet, idbPut } from './persist';
 
 const HISTORY_LIMIT = 80;
@@ -44,6 +45,7 @@ export interface TFState {
   redo(): void;
 
   randomizeAll(): void;
+  setStyle(styleId: string): void;
   randomizeLayerById(id: string): void;
   randomizeEffectById(layerId: string, effectId: string): void;
   setSeed(seed: string): void;
@@ -150,9 +152,7 @@ export const useStore = create<TFState>((set, get) => {
     randomizeLayerById(id) {
       const { doc } = get();
       const seed = randomSeed();
-      commit(
-        mutLayer(doc, id, (l) => randomizeLayer(l, new Rng(seed), doc.colorMode === 'vector-safe')),
-      );
+      commit(mutLayer(doc, id, (l) => randomizeLayer(doc, l, new Rng(seed))));
     },
     randomizeEffectById(layerId, effectId) {
       commit(randomizeEffect(get().doc, layerId, effectId, randomSeed()));
@@ -163,7 +163,15 @@ export const useStore = create<TFState>((set, get) => {
     },
     newRandomDocument() {
       const { doc } = get();
-      const next = generateStarterDocument(randomSeed(), doc.width, doc.height);
+      const next = generateStarterDocument(randomSeed(), doc.width, doc.height, doc.style ?? 'freeform');
+      next.name = doc.name;
+      commit(next);
+      set({ selectedLayerId: next.layers[next.layers.length - 1]?.id ?? null });
+    },
+    setStyle(styleId: string) {
+      const { doc } = get();
+      if ((doc.style ?? 'freeform') === styleId) return;
+      const next = generateStarterDocument(randomSeed(), doc.width, doc.height, styleId);
       next.name = doc.name;
       commit(next);
       set({ selectedLayerId: next.layers[next.layers.length - 1]?.id ?? null });
@@ -263,7 +271,13 @@ export const useStore = create<TFState>((set, get) => {
 
     rerollPaletteAction(rule, mood) {
       const { doc } = get();
-      commit({ ...doc, palette: rerollPalette(doc.palette, new Rng(randomSeed()), rule, mood) });
+      const mode = getStyle(doc.style).paletteMode;
+      // Explicit harmony/mood picks override the style's palette mode.
+      const palette =
+        !rule && !mood && mode !== 'any'
+          ? rerollPaletteForMode(doc.palette, new Rng(randomSeed()), mode)
+          : rerollPalette(doc.palette, new Rng(randomSeed()), rule, mood);
+      commit({ ...doc, palette });
     },
     setSwatch(i, hex) {
       const { doc } = get();

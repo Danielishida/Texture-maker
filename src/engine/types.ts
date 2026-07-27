@@ -61,7 +61,7 @@ export interface Effect {
   locked: boolean;
 }
 
-export type LayerType = 'fill' | 'scatter' | 'noise' | 'pattern' | 'type';
+export type LayerType = 'fill' | 'scatter' | 'noise' | 'pattern' | 'type' | 'tiles';
 
 export interface Layer {
   id: string;
@@ -93,6 +93,8 @@ export interface TFDocument {
   colorMode: 'raster' | 'vector-safe';
   tileable: boolean;
   seed: string;
+  /** Style profile id steering randomization (default 'freeform'). */
+  style?: string;
   palette: Palette;
   layers: Layer[]; // index 0 = bottom
 }
@@ -114,6 +116,11 @@ export const PLACEMENTS = ['uniform', 'grid', 'ring', 'flow', 'subdiv'] as const
 export const PATTERNS = ['stripes', 'checker', 'dots', 'herringbone', 'waves', 'rings'] as const;
 export const TYPE_LAYOUTS = ['single', 'scatter', 'grid', 'ring', 'wave'] as const;
 export const NOISE_TYPES = ['fbm', 'billow', 'ridged', 'worley'] as const;
+export const MOTIF_SETS = ['quarter quilt', 'bauhaus mix', 'dot fans', 'deco cubes', 'arcs & rings', 'geo mix'] as const;
+export const TILE_GRIDS = ['square', 'staggered'] as const;
+export const TILE_ROT_MODES = ['fixed', 'quarter', 'half'] as const;
+export const TILE_COLOR_MODES = ['duo', 'multi', 'collage'] as const;
+export const TILE_BG_MODES = ['none', 'solid', 'mixed'] as const;
 
 const opts = (labels: readonly string[]) => labels.map((label, value) => ({ value, label }));
 
@@ -142,6 +149,8 @@ export const LAYER_DEFS: Record<LayerType, LayerDef> = {
       { key: 'count', label: 'Count', kind: 'number', min: 1, max: 500, step: 1, def: 40, rmin: 6, rmax: 220 },
       { key: 'minSize', label: 'Min size', kind: 'number', min: 0.002, max: 0.5, def: 0.02, rmax: 0.12 },
       { key: 'maxSize', label: 'Max size', kind: 'number', min: 0.004, max: 0.9, def: 0.12, rmin: 0.04, rmax: 0.45 },
+      { key: 'baseRot', label: 'Base angle', kind: 'number', min: 0, max: 360, def: 0, rmin: 0, rmax: 0 },
+      { key: 'aspect', label: 'Elongation', kind: 'number', min: 1, max: 16, def: 1, rmin: 1, rmax: 1 },
       { key: 'rotJitter', label: 'Rotation', kind: 'number', min: 0, max: 180, def: 0 },
       { key: 'jitter', label: 'Jitter', kind: 'number', min: 0, max: 1, def: 0.5 },
       { key: 'fillMode', label: 'Fill', kind: 'select', options: opts(['fill', 'stroke', 'both']), def: 0 },
@@ -177,6 +186,22 @@ export const LAYER_DEFS: Record<LayerType, LayerDef> = {
       { key: 'phase', label: 'Phase', kind: 'number', min: 0, max: 1, def: 0 },
       { key: 'waveAmp', label: 'Wave amount', kind: 'number', min: 0, max: 1, def: 0.3 },
       { key: 'colorSlot', label: 'Color', kind: 'slot', def: 2, allowMix: true },
+    ],
+  },
+  tiles: {
+    type: 'tiles',
+    name: 'Tile Grid',
+    vectorSafe: true,
+    params: [
+      { key: 'motifSet', label: 'Motifs', kind: 'select', options: opts(MOTIF_SETS), def: 0 },
+      { key: 'gridType', label: 'Grid', kind: 'select', options: opts(TILE_GRIDS), def: 0 },
+      { key: 'columns', label: 'Columns', kind: 'number', min: 2, max: 24, step: 1, def: 6, rmin: 3, rmax: 10 },
+      { key: 'rotMode', label: 'Rotation', kind: 'select', options: opts(TILE_ROT_MODES), def: 1 },
+      { key: 'colorMode', label: 'Coloring', kind: 'select', options: opts(TILE_COLOR_MODES), def: 1 },
+      { key: 'cellBg', label: 'Cell background', kind: 'select', options: opts(TILE_BG_MODES), def: 0 },
+      { key: 'inset', label: 'Cell inset', kind: 'number', min: 0, max: 0.25, def: 0.04, rmax: 0.1 },
+      { key: 'lineW', label: 'Line weight', kind: 'number', min: 0.02, max: 0.2, def: 0.07 },
+      { key: 'detail', label: 'Detail', kind: 'number', min: 0, max: 1, def: 0.6 },
     ],
   },
   type: {

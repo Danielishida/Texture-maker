@@ -113,6 +113,81 @@ export function rerollPalette(pal: Palette, rng: Rng, rule?: HarmonyRule, mood?:
   };
 }
 
+// --- Style palette modes ------------------------------------------------------
+// Constrained generators used by style profiles (see styles.ts).
+
+export type PaletteMode = 'any' | 'duo' | 'retroWarm' | 'tonal';
+
+/** Two-color: extreme background + one strong ink across all accent slots. */
+export function generateDuoPalette(rng: Rng): Palette {
+  const hue = rng.range(0, 360);
+  const darkBg = rng.chance(0.6);
+  const bg = darkBg
+    ? oklchToHex(rng.range(0.13, 0.22), rng.range(0.0, 0.05), hue)
+    : oklchToHex(rng.range(0.92, 0.97), rng.range(0.0, 0.05), hue);
+  const inkHue = rng.chance(0.5) ? hue : (hue + rng.range(120, 240)) % 360;
+  const ink = darkBg
+    ? oklchToHex(rng.range(0.85, 0.96), rng.range(0.0, 0.12), inkHue)
+    : oklchToHex(rng.range(0.2, 0.32), rng.range(0.02, 0.14), inkHue);
+  return { name: 'duo', colors: [bg, ink, ink, ink, ink], locks: [false, false, false, false, false] };
+}
+
+/** Mid-century warm retro: cream base + orange/red/plum/golden accents. */
+export function generateRetroWarmPalette(rng: Rng): Palette {
+  const j = (v: number, r: number) => v + rng.range(-r, r);
+  return {
+    name: 'retro warm',
+    colors: [
+      oklchToHex(rng.range(0.93, 0.965), rng.range(0.02, 0.045), j(85, 10)), // cream
+      oklchToHex(j(0.68, 0.04), j(0.17, 0.02), j(48, 8)), // orange
+      oklchToHex(j(0.52, 0.04), j(0.2, 0.02), j(27, 5)), // red
+      oklchToHex(j(0.33, 0.04), j(0.12, 0.02), j(350, 12)), // plum
+      oklchToHex(j(0.78, 0.04), j(0.15, 0.02), j(80, 8)), // golden
+    ],
+    locks: [false, false, false, false, false],
+  };
+}
+
+/** Tonal ladder of one hue (corporate look) — near-white base to deep shade. */
+export function generateTonalPalette(rng: Rng): Palette {
+  const hue = rng.chance(0.7) ? rng.range(230, 262) : rng.range(0, 360);
+  const cMax = rng.range(0.07, 0.13);
+  return {
+    name: 'tonal',
+    colors: [
+      oklchToHex(rng.range(0.95, 0.98), 0.005, hue),
+      oklchToHex(0.85, cMax * 0.35, hue),
+      oklchToHex(0.68, cMax * 0.7, hue),
+      oklchToHex(0.5, cMax, hue),
+      oklchToHex(0.32, cMax * 0.9, hue),
+    ],
+    locks: [false, false, false, false, false],
+  };
+}
+
+export function generatePaletteForMode(rng: Rng, mode: PaletteMode): Palette {
+  switch (mode) {
+    case 'duo':
+      return generateDuoPalette(rng);
+    case 'retroWarm':
+      return generateRetroWarmPalette(rng);
+    case 'tonal':
+      return generateTonalPalette(rng);
+    default:
+      return generatePalette(rng);
+  }
+}
+
+/** Reroll unlocked swatches within a style's palette mode. */
+export function rerollPaletteForMode(pal: Palette, rng: Rng, mode: PaletteMode): Palette {
+  const fresh = generatePaletteForMode(rng, mode);
+  return {
+    name: fresh.name,
+    colors: pal.colors.map((c, i) => (pal.locks[i] ? c : fresh.colors[i])),
+    locks: [...pal.locks],
+  };
+}
+
 // --- Curated trend palettes --------------------------------------------------
 
 export const CURATED_PALETTES: Palette[] = [

@@ -10,7 +10,8 @@ const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replac
 const f = (n: number) => Number(n.toFixed(2));
 
 function itemSvg(it: Item): string {
-  const tf = `transform="translate(${f(it.x)} ${f(it.y)}) rotate(${f((it.rot * 180) / Math.PI)})"`;
+  const scale = it.kind === 'shape' && it.aspect && it.aspect !== 1 ? ` scale(${f(it.aspect)} 1)` : '';
+  const tf = `transform="translate(${f(it.x)} ${f(it.y)}) rotate(${f((it.rot * 180) / Math.PI)})${scale}"`;
   const alpha = it.alpha < 1 ? ` opacity="${f(it.alpha)}"` : '';
   if (it.kind === 'text') {
     const paint = it.fill
@@ -57,6 +58,21 @@ function itemSvg(it: Item): string {
       return `<line ${tf} x1="${f(-r)}" y1="0" x2="${f(r)}" y2="0" stroke="${it.color}" stroke-width="${f(it.strokeW)}"${alpha}/>`;
     case 'arc':
       return `<path ${tf} d="M ${f(r)} 0 A ${f(r)} ${f(r)} 0 1 1 ${f(Math.cos(Math.PI * 1.2) * r)} ${f(Math.sin(Math.PI * 1.2) * r)}" fill="none" stroke="${it.color}" stroke-width="${f(it.strokeW)}"${alpha}/>`;
+    case 'quarter':
+      return `<path ${tf} d="M 0 0 L ${f(r)} 0 A ${f(r)} ${f(r)} 0 0 1 0 ${f(r)} Z" ${paint}${alpha}/>`;
+    case 'semi':
+      return `<path ${tf} d="M ${f(-r)} 0 A ${f(r)} ${f(r)} 0 0 1 ${f(r)} 0 Z" ${paint}${alpha}/>`;
+    case 'qarc':
+      return `<path ${tf} d="M ${f(-r)} 0 A ${f(r)} ${f(r)} 0 0 1 0 ${f(-r)}" fill="none" stroke="${it.color}" stroke-width="${f(it.strokeW)}"${alpha}/>`;
+    case 'poly':
+    case 'polyline': {
+      const pts = it.pts ?? [];
+      const coords: string[] = [];
+      for (let i = 0; i + 1 < pts.length; i += 2) coords.push(`${f(pts[i] * r)},${f(pts[i + 1] * r)}`);
+      const tag = it.shape === 'poly' ? 'polygon' : 'polyline';
+      const pp = it.shape === 'polyline' ? `fill="none" stroke="${it.color}" stroke-width="${f(it.strokeW)}"` : paint;
+      return `<${tag} ${tf} points="${coords.join(' ')}" ${pp}${alpha}/>`;
+    }
   }
 }
 

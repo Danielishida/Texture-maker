@@ -3,7 +3,7 @@
 // When the document is tileable, content is drawn at 3×3 toroidal offsets so
 // shapes crossing an edge reappear on the opposite side.
 
-import { buildFillSpec, buildPattern, buildScatter, buildType, type FillSpec, type Item } from './displaylist';
+import { buildFillSpec, buildPattern, buildScatter, buildTiles, buildType, type FillSpec, type Item } from './displaylist';
 import type { Layer, TFDocument } from './types';
 
 export interface Region {
@@ -19,6 +19,7 @@ function drawItem(ctx: Ctx2D, it: Item) {
   ctx.save();
   ctx.translate(it.x, it.y);
   ctx.rotate(it.rot);
+  if (it.kind === 'shape' && it.aspect && it.aspect !== 1) ctx.scale(it.aspect, 1);
   ctx.globalAlpha *= it.alpha;
   if (it.kind === 'text') {
     ctx.font = `${it.weight} ${Math.max(1, it.size)}px "${it.font}"`;
@@ -101,6 +102,35 @@ function drawItem(ctx: Ctx2D, it: Item) {
       ctx.stroke();
       ctx.restore();
       return;
+    case 'quarter':
+      // Quarter disc pivoted at the item origin, spanning the +x/+y quadrant.
+      ctx.moveTo(0, 0);
+      ctx.lineTo(r, 0);
+      ctx.arc(0, 0, r, 0, Math.PI / 2);
+      ctx.closePath();
+      break;
+    case 'semi':
+      ctx.arc(0, 0, r, Math.PI, Math.PI * 2);
+      ctx.closePath();
+      break;
+    case 'qarc':
+      ctx.arc(0, 0, r, Math.PI, Math.PI * 1.5);
+      ctx.strokeStyle = it.color;
+      ctx.lineWidth = Math.max(0.5, it.strokeW);
+      ctx.stroke();
+      ctx.restore();
+      return;
+    case 'poly':
+    case 'polyline': {
+      const pts = it.pts ?? [];
+      for (let i = 0; i + 1 < pts.length; i += 2) {
+        const x = pts[i] * r;
+        const y = pts[i + 1] * r;
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+      if (it.shape === 'poly') ctx.closePath();
+      break;
+    }
   }
   if (it.fill) {
     ctx.fillStyle = it.color;
@@ -171,6 +201,8 @@ export function layerItems(layer: Layer, doc: TFDocument): Item[] {
       return buildScatter(layer, doc);
     case 'pattern':
       return buildPattern(layer, doc);
+    case 'tiles':
+      return buildTiles(layer, doc);
     case 'type':
       return buildType(layer, doc);
     default:
@@ -194,6 +226,11 @@ export function renderLayer2D(
   const sy = canvas.height / region.h;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  // Force the 2D rasterizer to flush the clear before new drawing. Without
+  // this, texImage2D can upload a STALE snapshot of this (reused) canvas on
+  // some Chromium configurations — layers then composite with the previous
+  // layer's pixels. A 1px readback is cheap and makes uploads reliable.
+  ctx.getImageData(0, 0, 1, 1);
   ctx.setTransform(sx, 0, 0, sy, -region.x * sx, -region.y * sy);
   ctx.globalAlpha = 1;
 

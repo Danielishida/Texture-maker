@@ -5,7 +5,7 @@ import { LAYER_DEFS, type LayerType } from '../engine/types';
 import { IconButton } from './controls';
 import { PalettePanel } from './PalettePanel';
 
-const ADDABLE: LayerType[] = ['fill', 'scatter', 'noise', 'pattern', 'type'];
+const ADDABLE: LayerType[] = ['fill', 'scatter', 'tiles', 'noise', 'pattern', 'type'];
 
 export function LayerPanel() {
   const doc = useStore((s) => s.doc);

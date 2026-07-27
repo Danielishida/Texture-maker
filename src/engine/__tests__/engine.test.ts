@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { Rng, makeNoise2D, mulberry32, xmur3 } from '../prng';
-import { generatePalette, oklchToHex, rerollPalette } from '../palette';
+import { generateDuoPalette, generatePalette, generateRetroWarmPalette, generateTonalPalette, oklchToHex, rerollPalette } from '../palette';
 import { generateStarterDocument, randomizeDocument } from '../randomize';
-import { migrateDocument, SCHEMA_VERSION } from '../types';
-import { buildScatter } from '../displaylist';
+import { makeLayer, migrateDocument, SCHEMA_VERSION } from '../types';
+import { buildScatter, buildTiles } from '../displaylist';
 import { documentToSvg } from '../svg';
+import { STYLES } from '../styles';
 
 const HEX = /^#[0-9a-f]{6}$/;
 
@@ -100,6 +101,65 @@ describe('schema migration', () => {
     expect(() => migrateDocument({})).toThrow();
     expect(() => migrateDocument(null)).toThrow();
     expect(() => migrateDocument({ version: SCHEMA_VERSION + 1 })).toThrow();
+  });
+});
+
+describe('style profiles', () => {
+  it('style palettes produce 5 valid hex swatches', () => {
+    const rng = () => new Rng('stylepal');
+    for (const pal of [generateDuoPalette(rng()), generateRetroWarmPalette(rng()), generateTonalPalette(rng())]) {
+      expect(pal.colors).toHaveLength(5);
+      pal.colors.forEach((c) => expect(c).toMatch(HEX));
+    }
+  });
+  it('duo palettes use a single ink across accent slots', () => {
+    const pal = generateDuoPalette(new Rng('duo'));
+    expect(new Set(pal.colors.slice(1)).size).toBe(1);
+    expect(pal.colors[0]).not.toBe(pal.colors[1]);
+  });
+  it('every style generates deterministic starter documents', () => {
+    for (const style of STYLES) {
+      const a = generateStarterDocument('st-' + style.id, 2000, 1500, style.id);
+      const b = generateStarterDocument('st-' + style.id, 2000, 1500, style.id);
+      expect(a).toEqual(b);
+      expect(a.style).toBe(style.id);
+      expect(a.layers.length).toBeGreaterThan(0);
+    }
+  });
+  it('randomize keeps the document inside its style', () => {
+    const doc = generateStarterDocument('q1', 2000, 2000, 'quilt');
+    const rolled = randomizeDocument(doc, 'q2');
+    expect(rolled.style).toBe('quilt');
+    const tiles = rolled.layers.find((l) => l.type === 'tiles');
+    expect(tiles).toBeDefined();
+    expect(tiles!.params.motifSet).toBe(0); // quarter-circle vocabulary enforced by tune()
+    expect(rolled.layers.every((l) => l.blendMode === 'normal')).toBe(true);
+  });
+});
+
+describe('tile grid layer', () => {
+  it('builds deterministic, non-empty display lists for every motif set', () => {
+    const doc = generateStarterDocument('tiles', 1200, 900, 'freeform');
+    for (let set = 0; set < 6; set++) {
+      const layer = makeLayer('tiles', 'tl' + set, 'tileseed' + set);
+      layer.params.motifSet = set;
+      layer.params.cellBg = set === 0 ? 1 : 0;
+      const a = buildTiles(layer, doc);
+      expect(a.length).toBeGreaterThan(0);
+      expect(a).toEqual(buildTiles(layer, doc));
+      for (const it of a) {
+        expect(Number.isFinite(it.x)).toBe(true);
+        expect(Number.isFinite(it.y)).toBe(true);
+        expect(it.size).toBeGreaterThan(0);
+      }
+    }
+  });
+  it('tile layers export to SVG', () => {
+    const doc = generateStarterDocument('svgtile', 1000, 1000, 'quilt');
+    doc.colorMode = 'vector-safe';
+    const svg = documentToSvg(doc);
+    expect(svg).toContain('<path');
+    expect(svg).not.toContain('NaN');
   });
 });
 

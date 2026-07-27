@@ -7,6 +7,7 @@ import { DOC_PRESETS } from '../engine/types';
 import { openProjectFile, saveProjectFile, loadRecipes, saveRecipes, type Recipe } from '../state/persist';
 import { randomSeed, uid } from '../engine/prng';
 import { randomizeDocument } from '../engine/randomize';
+import { STYLES } from '../engine/styles';
 
 export function TopBar(props: { onExport: () => void }) {
   const doc = useStore((s) => s.doc);
@@ -68,6 +69,18 @@ export function TopBar(props: { onExport: () => void }) {
         </button>
       </span>
 
+      <select
+        className="style-select"
+        title="Style: constrains randomize rolls to a visual genre"
+        value={doc.style ?? 'freeform'}
+        onChange={(e) => s.setStyle(e.target.value)}
+      >
+        {STYLES.map((st) => (
+          <option key={st.id} value={st.id}>
+            {st.label}
+          </option>
+        ))}
+      </select>
       <button className="primary" title="Randomize everything unlocked (Space)" onClick={() => s.randomizeAll()}>
         🎲 Randomize
       </button>

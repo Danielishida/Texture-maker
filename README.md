@@ -54,6 +54,19 @@ same way, e.g. `--platform=linux` or `--platform=darwin` with `@electron/package
     wood rings, brushed metal, vignette
 - **12 blend modes** per layer, GPU-composited
 
+### Style profiles
+A style dropdown constrains every Randomize roll to a coherent, sellable genre —
+structure stays locked to the style while motifs, density, rotations, and
+palette reroll. Shipped styles: **Freeform** (original anything-goes),
+**Mid-century Quilt** (quarter-circle tile grids, warm retro palettes),
+**Bauhaus Collage** (mixed-motif grid: semicircles, rings, dot clusters,
+inset squares), **Art Deco Fans** (staggered dotted fans, two-color),
+**Geo Cubes** (interlocking isometric cube lattice with concentric line
+faces, two-color), and **Angular Planes** (corporate diagonal bars, tonal
+single-hue palettes). Powered by a **Tile Grid** layer type (12-motif
+vocabulary, square/staggered grids, quantized rotation, per-cell seeds) and
+three constrained palette modes (duo, retro-warm, tonal).
+
 ### Randomization (the heart of the tool)
 - Global **Randomize** (Space), per-layer and per-effect dice
 - **Locks at every level**: layers, individual parameters, blend/opacity, palette
